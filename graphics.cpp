@@ -40,19 +40,21 @@ Vec3f cast_ray(const Vec3f &orig, const Vec3f &dir, const Sphere &sphere)
 
     return Vec3f(0.4, 0.4, 0.3);
 }
+
 void render(const Sphere &sphere) {
     const int width    = 1024;
     const int height   = 768;
-    const int fov      = M_PI/2.;
+    const float fov      = M_PI/2.;//исправил на float
     std::vector<Vec3f> framebuffer(width*height);
 
     #pragma omp parallel for
     for (size_t j = 0; j<height; j++) {
         for (size_t i = 0; i<width; i++) {
             float x =  (2*(i + 0.5)/(float)width  - 1)*tan(fov/2.)*width/(float)height;
-            float y = -(2*(j + 0.5)/(float)height - 1)*tan(fov/2.);
+            float y = -(2*(j + 0.5)/(float)height - 1)*tan(fov/2.);//экран помещен на расстояние 1 от начала! типа там фокус что ли. смотри wiki в REadme.
             Vec3f dir = Vec3f(x, y, -1).normalize();
-            framebuffer[i+j*width] = cast_ray(Vec3f(0,0,-5), dir, sphere);
+            std::cout<<Vec3f(x, y, -1)<< fov/2.<<std::endl ;
+            framebuffer[i+j*width] = cast_ray(Vec3f(0,0,0), dir, sphere);
         }
     }
 
@@ -75,12 +77,7 @@ void render(const Sphere &sphere) {
 int main() 
 {
     Sphere sphere(Vec3f(0, 1, 3), 3.17);
-    float i;
-    if(sphere.ray_intersect(Vec3f(0,0,0),Vec3f(0,0,-1),i))
-        std::cout<<"da";
-    else
-        std::cout<<"net";
-//    render(sphere);
+    render(sphere);
 
     return 0;
 }
