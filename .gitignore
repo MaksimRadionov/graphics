@@ -1,1 +1,7 @@
+*
 tinyraytracer/*
+.*.swp
+*.o
+
+!*.cpp
+!*.h

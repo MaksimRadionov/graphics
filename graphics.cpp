@@ -7,6 +7,13 @@
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "./stb/stb_image_write.h"
 
+struct Light 
+{
+    Light(const Vec3f &p, const float &i) : position(p), intensity(i) {}
+    Vec3f position;
+    float intensity;
+};
+
 struct Material 
 {
     Material(const Vec3f &color) : diffuse_color(color) {}
@@ -57,16 +64,24 @@ bool scene_intersect(const Vec3f &orig, const Vec3f &dir, const std::vector<Sphe
     return spheres_dist<1000;
 }
 
-Vec3f cast_ray(const Vec3f &orig, const Vec3f &dir, const std::vector<Sphere> &spheres) 
+Vec3f cast_ray(const Vec3f &orig, const Vec3f &dir, const std::vector<Sphere> &spheres, const std::vector<Light> &lights) 
 {
     Vec3f point, N;//точка пересечения с ближайшей сферой и нормаль к этой точке
     Material material;
     if (!scene_intersect(orig, dir, spheres, point, N, material))
-        return Vec3f(0, 0, 0); // background color
-    return material.diffuse_color;
+        return Vec3f(0.2, 0.7, 0.8); // background color
+    
+    float diffuse_light_intensity = 0;
+    for (size_t i=0; i<lights.size(); i++) 
+    {
+        Vec3f light_dir      = (lights[i].position - point).normalize();
+        diffuse_light_intensity  += lights[i].intensity * std::max(0.f, light_dir*N);
+    }
+    return material.diffuse_color * diffuse_light_intensity;
 }
 
-void render(const std::vector<Sphere> &spheres) {
+void render(const std::vector<Sphere> &spheres, const std::vector<Light> &lights,std::string file_name) 
+{
     const int width    = 1024;
     const int height   = 768;
     const float fov      = M_PI/2;//исправил на float
@@ -78,13 +93,13 @@ void render(const std::vector<Sphere> &spheres) {
             float x =  (2*(i + 0.5)/(float)width  - 1)*tan(fov/2.)*width/(float)height;
             float y = -(2*(j + 0.5)/(float)height - 1)*tan(fov/2.);//экран помещен на расстояние 1 от начала! типа там фокус что ли. смотри wiki в REadme.
             Vec3f dir = Vec3f(x, y, -1).normalize();
-            framebuffer[i+j*width] = cast_ray(Vec3f(0,0,0), dir, spheres);
+            framebuffer[i+j*width] = cast_ray(Vec3f(0,0,0), dir, spheres, lights);
         }
     }
 
 
     std::ofstream ofs; // save the framebuffer to file
-    ofs.open("./out.ppm");
+    ofs.open(file_name.c_str());
     ofs << "P6\n" << width << " " << height << "\n255\n";
     for (size_t i = 0; i < height*width; ++i) 
     {
@@ -102,15 +117,23 @@ int main()
 {
     Material      ivory(Vec3f(0., 1., 0.));
     Material red_rubber(Vec3f(0.3, 0.1, 0.1));
+    
 
     std::vector<Sphere> spheres;
     spheres.push_back(Sphere(Vec3f(-3,    0,   -16), 2,      ivory));
     spheres.push_back(Sphere(Vec3f(-1.0, -1.5, -12), 2, red_rubber));
     spheres.push_back(Sphere(Vec3f( 1.5, -0.5, -18), 3, red_rubber));
     spheres.push_back(Sphere(Vec3f( 7,    5,   -18), 4,      ivory));
+    for(float i =0 ; i<2*M_PI; i+=0.1)
+    {
+        static int j =0;
+        j++;
+        std::cout<<"a "<<20*cos(i)<<" "<<20*sin(i)<<std::endl;
+        std::vector<Light>  lights;
+        lights.push_back(Light(Vec3f(20*cos(i), 20*sin(i),  20), 1.5));
 
-    render(spheres);
-
+        render(spheres, lights,std::string(std::to_string(j)+".ppm"));
+    }
     return 0;
 }
 
